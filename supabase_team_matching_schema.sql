@@ -143,9 +143,11 @@ create table if not exists public.team_matching_leader_applications (
     check (status in ('pending', 'accepted', 'rejected')),
   message text,
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
-  unique (member_id)
+  updated_at timestamptz not null default now()
 );
+
+alter table public.team_matching_leader_applications
+  drop constraint if exists team_matching_leader_applications_member_id_key;
 
 drop trigger if exists team_matching_leader_applications_set_updated_at on public.team_matching_leader_applications;
 create trigger team_matching_leader_applications_set_updated_at
