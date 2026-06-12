@@ -4,13 +4,16 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
+    "dev": "node scripts/dev.mjs",
+    "dev:vite": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
-    "import:sql": "node scripts/build-import-sql.mjs"
+    "import:sql": "node scripts/build-import-sql.mjs",
+    "supabase:apply": "node scripts/apply-supabase-sql.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.106.2",
+    "lucide-react": "^1.17.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6"
   },

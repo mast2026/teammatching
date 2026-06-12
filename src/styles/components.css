@@ -1,0 +1,366 @@
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.contest-card,
+.team-card,
+.application-card,
+.award-card {
+  padding: 14px 16px;
+}
+
+.contest-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.contest-card h3,
+.team-card h3,
+.application-card h3,
+.award-card h3 {
+  margin: 8px 0 6px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.contest-desc,
+.team-intro {
+  color: var(--muted);
+  line-height: 1.5;
+  font-size: var(--font-caption);
+}
+
+.team-leader,
+.team-list-meta {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.contest-card-top,
+.team-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dday-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  border-radius: 6px;
+  padding: 0 7px;
+  background: #1e3a5f;
+  color: #fff;
+  font-size: 0.6875rem;
+  font-weight: 600;
+}
+
+.dday-badge.urgent {
+  background: #16a34a;
+}
+
+.dday-badge.closed {
+  background: #9ca3af;
+}
+
+.contest-category-text {
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 500;
+}
+
+.contest-list-item {
+  position: relative;
+  padding: 14px 0;
+}
+
+.contest-list-item:not(.embedded) {
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  margin-bottom: 8px;
+}
+
+.contest-list-item.embedded {
+  border-bottom: 1px solid #eef1f4;
+  padding: 18px 8px;
+}
+
+.contest-list-item.embedded:first-child {
+  padding-top: 4px;
+}
+
+.contest-list-item.embedded:last-child {
+  border-bottom: 0;
+  padding-bottom: 8px;
+}
+
+.contest-list-item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.contest-list-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.contest-team-summary {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  flex-shrink: 0;
+  font-size: var(--font-small);
+  font-weight: 600;
+}
+
+.contest-team-summary-item.recruiting {
+  color: #c2410c;
+}
+
+.contest-team-summary-item.matched {
+  color: #15803d;
+}
+
+.contest-list-title {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.5;
+  color: var(--ink);
+  letter-spacing: -0.015em;
+}
+
+.contest-list-meta-rows {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.contest-list-meta-rows div {
+  display: grid;
+  grid-template-columns: 40px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  min-width: 0;
+}
+
+.contest-list-meta-rows dt {
+  margin: 0;
+  color: var(--muted-2);
+  font-size: var(--font-small);
+  font-weight: 500;
+}
+
+.contest-list-meta-rows dd {
+  margin: 0;
+  color: #4e5968;
+  font-size: var(--font-caption);
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+.contest-list-item-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.team-card-list {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--paper);
+  margin-bottom: 8px;
+}
+
+.team-card-list-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.team-card-list-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.team-card-list-aside {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  min-width: 120px;
+}
+
+.contest-meta-grid {
+  margin-top: 8px;
+}
+
+.contest-meta-grid dd {
+  overflow: hidden;
+}
+
+.contest-card-footer,
+.team-card-footer,
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 10px;
+}
+
+.team-progress {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0;
+}
+
+.team-progress-bar {
+  flex: 1 1 100px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--line-soft);
+  overflow: hidden;
+}
+
+.team-progress-bar.compact {
+  width: 100%;
+  flex: none;
+}
+
+.team-progress-bar span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--navy);
+}
+
+.application-card {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: 12px;
+  background: var(--page);
+}
+
+.application-message {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.application-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: var(--muted-2);
+  font-size: var(--font-small);
+  font-weight: 500;
+}
+
+.award-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.award-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: #fffbeb;
+  color: #b98213;
+}
+
+.award-result {
+  display: inline-flex;
+  margin-bottom: 4px;
+  border-radius: var(--radius-pill);
+  padding: 3px 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: var(--font-small);
+  font-weight: 600;
+}
+
+.award-card-compact {
+  padding: 14px 16px;
+  gap: 10px;
+}
+
+.award-card-compact .award-card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.award-card-compact h3 {
+  font-size: 0.95rem;
+}
+
+.award-card-compact p {
+  margin: 6px 0 0;
+  font-size: 0.84rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.form-section-title {
+  margin: 0 0 12px;
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .team-card-list {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .team-card-list-aside {
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
