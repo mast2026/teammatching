@@ -5,8 +5,8 @@ MAST 공모전 팀 매칭 플랫폼을 Replit 서비스 종료에 대비해 재�
 ## Stack
 
 - Vite + React
-- Netlify static hosting
-- Netlify Functions API
+- Netlify or Vercel static hosting
+- Netlify Functions API, with a Vercel API adapter
 - Supabase PostgreSQL
 
 ## Supabase Safety Rule
@@ -37,10 +37,10 @@ SUPABASE_URL=
 SUPABASE_SERVICE_ROLE_KEY=
 ADMIN_PASSWORD=
 ADVISOR_PASSWORD=
-VITE_API_BASE=/.netlify/functions/api
+VITE_API_BASE=/api
 ```
 
-`SUPABASE_SERVICE_ROLE_KEY`는 Netlify Functions 서버 환경에만 넣어야 합니다. 브라우저에 노출되는 `VITE_*` 변수로 넣지 마세요.
+`SUPABASE_SERVICE_ROLE_KEY`는 Netlify Functions 또는 Vercel Serverless Functions 서버 환경에만 넣어야 합니다. 브라우저에 노출되는 `VITE_*` 변수로 넣지 마세요.
 
 ## Migration
 
