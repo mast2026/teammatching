@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronRight, ClipboardList, Trophy, UsersRound } from "lucide-react";
+import { ChevronRight, ClipboardList, Trophy, UserRound, UsersRound } from "lucide-react";
 import { get } from "../../api.js";
 import { ApplicationCard } from "../../components/ApplicationCard.jsx";
 import { ContestCard } from "../../components/ContestCard.jsx";
@@ -14,6 +14,7 @@ const primaryActions = [
   { icon: Trophy, title: "공모전 탐색", href: "/contests" },
   { icon: UsersRound, title: "팀 매칭", href: "/teams" },
   { icon: ClipboardList, title: "내 지원 확인", href: "/my-applications" },
+  { icon: UserRound, title: "내 팀", href: "/my-team" },
 ];
 
 export function UserDashboard({ user }) {
