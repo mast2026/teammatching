@@ -12,12 +12,17 @@ const readBody = async (req) => {
 
 export default async function vercelApi(req, res) {
   const url = new URL(req.url, "http://localhost");
+  const rewrittenPath = url.searchParams.get("path");
+  const path = rewrittenPath ? `/api/${rewrittenPath}` : url.pathname;
+  const queryStringParameters = Object.fromEntries(url.searchParams.entries());
+  delete queryStringParameters.path;
+
   const result = await handler({
-    path: url.pathname,
+    path,
     httpMethod: req.method,
     headers: req.headers,
     body: await readBody(req),
-    queryStringParameters: Object.fromEntries(url.searchParams.entries())
+    queryStringParameters
   });
 
   for (const [key, value] of Object.entries(result.headers ?? {})) {
