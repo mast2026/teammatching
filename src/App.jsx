@@ -87,7 +87,7 @@ export default function App() {
 
   const currentPath = normalizePath(path);
 
-  if (!user && ["/", "/admin"].includes(currentPath)) {
+  if (!user && currentPath === "/admin") {
     return <Login onLogin={setUser} />;
   }
 
