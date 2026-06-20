@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createHmac, pbkdf2Sync, randomBytes, timingSafeEqual } from "node:crypto";
 
 const json = (statusCode, body, extraHeaders = {}) => ({
   statusCode,
@@ -51,7 +52,9 @@ const snake = {
   memberId: "member_id",
   tagTone: "tag_tone",
   publishedAt: "published_at",
-  isPublished: "is_published"
+  isPublished: "is_published",
+  passwordHash: "password_hash",
+  passwordSetAt: "password_set_at"
 };
 
 const camel = Object.fromEntries(Object.entries(snake).map(([k, v]) => [v, k]));
@@ -72,6 +75,14 @@ const toSnake = (row, allow) => {
   return out;
 };
 
+const publicMember = (row) => {
+  const member = toCamel(row);
+  if (!member || typeof member !== "object") return member;
+  const hasPassword = Boolean(member.passwordHash ?? member.hasPassword);
+  delete member.passwordHash;
+  return { ...member, hasPassword };
+};
+
 const env = () => {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -83,22 +94,85 @@ const env = () => {
       auth: { persistSession: false }
     }),
     adminPassword: process.env.ADMIN_PASSWORD || process.env.REPLIT_ADMIN_PASSWORD || "123456",
-    advisorPassword: process.env.ADVISOR_PASSWORD || process.env.REPLIT_ADVISOR_PASSWORD || ""
+    advisorPassword: process.env.ADVISOR_PASSWORD || process.env.REPLIT_ADVISOR_PASSWORD || "",
+    sessionSecret: process.env.SESSION_SECRET || serviceRoleKey
   };
 };
 
-const cookieFor = (user) =>
-  `mast_tm_session=${Buffer.from(JSON.stringify(user)).toString("base64url")}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`;
+const signValue = (value, secret) => createHmac("sha256", secret).update(value).digest("base64url");
+
+const makeSignedValue = (payload, secret) => {
+  const value = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  return `${value}.${signValue(value, secret)}`;
+};
+
+const readSignedValue = (signedValue, secret) => {
+  const [value, signature] = String(signedValue ?? "").split(".");
+  if (!value || !signature) return null;
+  const expected = signValue(value, secret);
+  const providedBuffer = Buffer.from(signature);
+  const expectedBuffer = Buffer.from(expected);
+  if (providedBuffer.length !== expectedBuffer.length || !timingSafeEqual(providedBuffer, expectedBuffer)) {
+    return null;
+  }
+  return JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
+};
+
+const cookieFor = (user, secret) =>
+  `mast_tm_session=${makeSignedValue(publicMember(user), secret)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`;
 
 const authFromCookie = (event) => {
   const cookie = event.headers.cookie || event.headers.Cookie || "";
   const match = cookie.match(/mast_tm_session=([^;]+)/);
   if (!match) return null;
   try {
-    return JSON.parse(Buffer.from(match[1], "base64url").toString("utf8"));
+    const { sessionSecret } = env();
+    return readSignedValue(match[1], sessionSecret);
   } catch {
     return null;
   }
+};
+
+const makeSetupToken = (memberId, secret) =>
+  makeSignedValue(
+    {
+      purpose: "member-password-setup",
+      memberId,
+      exp: Date.now() + 10 * 60 * 1000
+    },
+    secret
+  );
+
+const readSetupToken = (token, secret) => {
+  const payload = readSignedValue(token, secret);
+  if (!payload || payload.purpose !== "member-password-setup" || Date.now() > payload.exp) return null;
+  return payload;
+};
+
+const hashPassword = (password) => {
+  const salt = randomBytes(16).toString("base64url");
+  const iterations = 310000;
+  const hash = pbkdf2Sync(password, salt, iterations, 32, "sha256").toString("base64url");
+  return `pbkdf2$sha256$${iterations}$${salt}$${hash}`;
+};
+
+const verifyPassword = (password, storedHash) => {
+  const [scheme, digest, iterations, salt, expected] = String(storedHash ?? "").split("$");
+  if (scheme !== "pbkdf2" || digest !== "sha256" || !iterations || !salt || !expected) return false;
+  const actual = pbkdf2Sync(password, salt, Number(iterations), 32, digest).toString("base64url");
+  const actualBuffer = Buffer.from(actual);
+  const expectedBuffer = Buffer.from(expected);
+  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
+};
+
+const validatePassword = (password, passwordConfirm = password) => {
+  if (typeof password !== "string" || password.length < 6) {
+    return "비밀번호는 6자 이상이어야 합니다.";
+  }
+  if (password !== passwordConfirm) {
+    return "비밀번호 확인이 일치하지 않습니다.";
+  }
+  return null;
 };
 
 const requireAuth = (event) => {
@@ -319,7 +393,7 @@ async function applications(supabase, filter = {}) {
 }
 
 async function route(event) {
-  const { supabase, adminPassword, advisorPassword } = env();
+  const { supabase, adminPassword, advisorPassword, sessionSecret } = env();
   const method = event.httpMethod;
   const rawPath = event.path.replace(/^\/\.netlify\/functions\/api/, "").replace(/^\/api/, "") || "/";
   const path = rawPath.replace(/\/+$/, "") || "/";
@@ -329,13 +403,13 @@ async function route(event) {
   if (method === "POST" && path === "/auth/admin/login") {
     if (body.password !== adminPassword) return json(401, { message: "비밀번호가 올바르지 않습니다." });
     const user = { id: 1, name: "관리자", school: "MAST", generation: 1, role: "admin", isLeader: false };
-    return json(200, { member: user }, { "Set-Cookie": cookieFor(user) });
+    return json(200, { member: user }, { "Set-Cookie": cookieFor(user, sessionSecret) });
   }
 
   if (method === "POST" && path === "/auth/advisor/login") {
     if (!advisorPassword || body.password !== advisorPassword) return json(401, { message: "비밀번호가 올바르지 않습니다." });
     const user = { id: 62, name: "지도교수", school: "MAST", generation: 1, role: "professor", isLeader: false };
-    return json(200, { member: user }, { "Set-Cookie": cookieFor(user) });
+    return json(200, { member: user }, { "Set-Cookie": cookieFor(user, sessionSecret) });
   }
 
   if (method === "POST" && path === "/auth/login") {
@@ -351,9 +425,46 @@ async function route(event) {
       const generationOk = !body.generation || String(row.generation) === String(body.generation);
       return schoolOk && generationOk;
     });
-    if (!member) return json(401, { message: "회원 정보를 찾을 수 없습니다." });
-    const user = toCamel(member);
-    return json(200, { member: user }, { "Set-Cookie": cookieFor(user) });
+    if (!member) return json(401, { message: "입력한 회원 정보를 찾을 수 없습니다. 이름, 학교, 기수를 확인해 주세요." });
+    if (!member.password_hash) {
+      return json(200, {
+        setupRequired: true,
+        setupToken: makeSetupToken(member.id, sessionSecret),
+        member: publicMember(member)
+      });
+    }
+    if (!body.password) {
+      return json(200, {
+        passwordRequired: true,
+        member: publicMember(member)
+      });
+    }
+    if (!verifyPassword(body.password, member.password_hash)) {
+      return json(401, { message: "비밀번호가 올바르지 않습니다." });
+    }
+    const user = publicMember(member);
+    return json(200, { member: user }, { "Set-Cookie": cookieFor(user, sessionSecret) });
+  }
+
+  if (method === "POST" && path === "/auth/setup-password") {
+    const setupPayload = readSetupToken(body.setupToken, sessionSecret);
+    if (!setupPayload?.memberId) return json(401, { message: "비밀번호 설정 시간이 만료되었습니다. 다시 로그인해 주세요." });
+    const passwordError = validatePassword(body.password, body.passwordConfirm);
+    if (passwordError) return json(400, { message: passwordError });
+    const { data, error } = await supabase
+      .from("team_matching_members")
+      .update({
+        password_hash: hashPassword(body.password),
+        password_set_at: new Date().toISOString()
+      })
+      .eq("id", setupPayload.memberId)
+      .is("password_hash", null)
+      .select("*")
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) return json(409, { message: "이미 비밀번호가 설정되었습니다. 설정한 비밀번호로 로그인해 주세요." });
+    const user = publicMember(data);
+    return json(200, { member: user }, { "Set-Cookie": cookieFor(user, sessionSecret) });
   }
 
   if (method === "POST" && path === "/auth/logout") {
@@ -372,8 +483,8 @@ async function route(event) {
       .eq("id", session.id)
       .maybeSingle();
     if (error) throw error;
-    const member = data ? toCamel(data) : session;
-    return json(200, { member }, data ? { "Set-Cookie": cookieFor(member) } : {});
+    const member = data ? publicMember(data) : session;
+    return json(200, { member }, data ? { "Set-Cookie": cookieFor(member, sessionSecret) } : {});
   }
 
   if (method === "GET" && path === "/notifications") {
@@ -525,14 +636,14 @@ async function route(event) {
         .select("*")
         .single();
       if (error) throw error;
-      const member = toCamel(data);
-      return json(200, { member }, { "Set-Cookie": cookieFor(member) });
+      const member = publicMember(data);
+      return json(200, { member }, { "Set-Cookie": cookieFor(member, sessionSecret) });
     }
     if (method === "GET" && parts.length === 1) {
       requireAdmin(event);
       const { data, error } = await supabase.from("team_matching_members").select("*").order("name");
       if (error) throw error;
-      return json(200, (data ?? []).map(toCamel));
+      return json(200, (data ?? []).map(publicMember));
     }
     if (method === "POST" && parts.length === 1) {
       requireAdmin(event);
@@ -552,7 +663,7 @@ async function route(event) {
         .select("*")
         .single();
       if (error) throw error;
-      return json(201, toCamel(data));
+      return json(201, publicMember(data));
     }
     if (method === "DELETE" && parts.length === 2 && parts[1] !== "me") {
       requireAdmin(event);
@@ -562,26 +673,38 @@ async function route(event) {
     }
     if (method === "PATCH" && parts.length === 2) {
       requireAdmin(event);
+      const allowed = ["name", "school", "major", "generation", "role", "is_leader"];
       const { data, error } = await supabase
         .from("team_matching_members")
-        .update(toSnake(body))
+        .update(toSnake(body, allowed))
         .eq("id", Number(parts[1]))
         .select("*")
         .single();
       if (error) throw error;
-      return json(200, toCamel(data));
+      return json(200, publicMember(data));
+    }
+    if (method === "POST" && parts[2] === "reset-password") {
+      requireAdmin(event);
+      const { data, error } = await supabase
+        .from("team_matching_members")
+        .update({ password_hash: null, password_set_at: null })
+        .eq("id", Number(parts[1]))
+        .select("*")
+        .single();
+      if (error) throw error;
+      return json(200, publicMember(data));
     }
     if (method === "POST" && parts[2] === "grant-leader") {
       requireAdmin(event);
       const { data, error } = await supabase.from("team_matching_members").update({ is_leader: true }).eq("id", Number(parts[1])).select("*").single();
       if (error) throw error;
-      return json(200, toCamel(data));
+      return json(200, publicMember(data));
     }
     if (method === "POST" && parts[2] === "revoke-leader") {
       requireAdmin(event);
       const { data, error } = await supabase.from("team_matching_members").update({ is_leader: false }).eq("id", Number(parts[1])).select("*").single();
       if (error) throw error;
-      return json(200, toCamel(data));
+      return json(200, publicMember(data));
     }
   }
 

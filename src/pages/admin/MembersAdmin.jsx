@@ -130,12 +130,25 @@ export function MembersAdmin() {
       <DataTable
         compact
         rows={filtered}
-        columns={["name", "school", "major", "generation", "isLeader"]}
+        columns={["name", "school", "major", "generation", "isLeader", "hasPassword"]}
         actions={(row) => (
           <>
             <button type="button" onClick={() => edit(row)}>
               수정
             </button>
+            {row.hasPassword && (
+              <button
+                type="button"
+                onClick={async () => {
+                  if (window.confirm(`${row.name} 회원의 비밀번호를 초기화할까요?`)) {
+                    await post(`/members/${row.id}/reset-password`, {});
+                    refresh();
+                  }
+                }}
+              >
+                비번 초기화
+              </button>
+            )}
             <button
               type="button"
               onClick={async () => {

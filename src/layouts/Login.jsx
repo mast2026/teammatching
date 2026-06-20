@@ -14,6 +14,8 @@ export function Login({ onLogin, memberMode = false }) {
   const [mode, setMode] = useState(memberMode ? "member" : "admin");
   const [password, setPassword] = useState("");
   const [member, setMember] = useState({ name: "", school: "", generation: "1" });
+  const [setup, setSetup] = useState(null);
+  const [passwordStep, setPasswordStep] = useState(null);
   const [message, setMessage] = useState("");
 
   const submit = async (event) => {
@@ -21,12 +23,36 @@ export function Login({ onLogin, memberMode = false }) {
     setMessage("");
     try {
       let res;
-      if (mode === "admin") {
+      if (setup) {
+        res = await post("/auth/setup-password", {
+          setupToken: setup.setupToken,
+          password: setup.password,
+          passwordConfirm: setup.passwordConfirm,
+        });
+      } else if (passwordStep) {
+        res = await post("/auth/login", {
+          ...member,
+          password: passwordStep.password,
+        });
+      } else if (mode === "admin") {
         res = await post("/auth/admin/login", { password });
       } else if (mode === "advisor") {
         res = await post("/auth/advisor/login", { password });
       } else {
         res = await post("/auth/login", member);
+      }
+      if (res.setupRequired) {
+        setSetup({
+          setupToken: res.setupToken,
+          member: res.member,
+          password: "",
+          passwordConfirm: "",
+        });
+        return;
+      }
+      if (res.passwordRequired) {
+        setPasswordStep({ member: res.member, password: "" });
+        return;
       }
       onLogin(res.member);
       if (res.member.role === "admin") go("/admin");
@@ -43,6 +69,22 @@ export function Login({ onLogin, memberMode = false }) {
     member: "일반 회원 로그인",
   };
 
+  const switchMode = (nextMode) => {
+    setMode(nextMode);
+    setPassword("");
+    setSetup(null);
+    setPasswordStep(null);
+    setMessage("");
+  };
+
+  const backToMemberLookup = () => {
+    setSetup(null);
+    setPasswordStep(null);
+    setMessage("");
+  };
+
+  const title = setup ? "비밀번호 설정" : passwordStep ? "비밀번호 입력" : titles[mode];
+
   return (
     <main className="login-page">
       <header className="login-brand">
@@ -50,8 +92,46 @@ export function Login({ onLogin, memberMode = false }) {
         <p>MAST 공모전</p>
       </header>
       <form className="login-card" onSubmit={submit}>
-        <h2>{titles[mode]}</h2>
-        {mode === "admin" || mode === "advisor" ? (
+        <h2>{title}</h2>
+        {setup ? (
+          <div className="login-member-fields">
+            <p className="form-hint">
+              비밀번호가 설정되지 않았습니다. 최초 접속을 위해 비밀번호를 설정해 주세요.
+            </p>
+            <Field label="새 비밀번호">
+              <input
+                autoFocus
+                type="password"
+                value={setup.password}
+                onChange={(event) => setSetup({ ...setup, password: event.target.value })}
+                placeholder="6자 이상"
+                required
+              />
+            </Field>
+            <Field label="비밀번호 확인">
+              <input
+                type="password"
+                value={setup.passwordConfirm}
+                onChange={(event) => setSetup({ ...setup, passwordConfirm: event.target.value })}
+                placeholder="비밀번호 재입력"
+                required
+              />
+            </Field>
+          </div>
+        ) : passwordStep ? (
+          <div className="login-member-fields">
+            <Field label="비밀번호">
+              <input
+                autoFocus
+                type="password"
+                value={passwordStep.password}
+                onChange={(event) => setPasswordStep({ ...passwordStep, password: event.target.value })}
+                placeholder="비밀번호 입력"
+                required
+              />
+            </Field>
+          </div>
+        ) : mode === "admin" || mode === "advisor" ? (
           <Field label={mode === "admin" ? "관리자 비밀번호" : "지도교수 비밀번호"}>
             <input
               autoFocus
@@ -96,21 +176,26 @@ export function Login({ onLogin, memberMode = false }) {
         )}
         {message && <p className="form-error">{message}</p>}
         <button className="btn btn-primary btn-block login-submit-btn" type="submit">
-          {titles[mode]}
+          {setup ? "비밀번호 설정 후 로그인" : passwordStep ? "로그인" : titles[mode]}
         </button>
         <div className="login-switch">
-          {mode !== "member" && (
-            <button type="button" className="text-btn" onClick={() => setMode("member")}>
+          {(setup || passwordStep) && (
+            <button type="button" className="text-btn" onClick={backToMemberLookup}>
+              회원 정보 다시 입력
+            </button>
+          )}
+          {!setup && !passwordStep && mode !== "member" && (
+            <button type="button" className="text-btn" onClick={() => switchMode("member")}>
               일반 회원 로그인
             </button>
           )}
-          {mode !== "admin" && (
-            <button type="button" className="text-btn" onClick={() => setMode("admin")}>
+          {!setup && !passwordStep && mode !== "admin" && (
+            <button type="button" className="text-btn" onClick={() => switchMode("admin")}>
               관리자 로그인
             </button>
           )}
-          {mode !== "advisor" && (
-            <button type="button" className="text-btn" onClick={() => setMode("advisor")}>
+          {!setup && !passwordStep && mode !== "advisor" && (
+            <button type="button" className="text-btn" onClick={() => switchMode("advisor")}>
               지도교수 로그인
             </button>
           )}

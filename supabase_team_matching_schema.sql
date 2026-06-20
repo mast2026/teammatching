@@ -37,10 +37,16 @@ create table if not exists public.team_matching_members (
   role text not null default 'member'
     check (role in ('member', 'admin', 'professor')),
   is_leader boolean not null default false,
+  password_hash text,
+  password_set_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   unique (name, school, generation)
 );
+
+alter table public.team_matching_members
+  add column if not exists password_hash text,
+  add column if not exists password_set_at timestamptz;
 
 drop trigger if exists team_matching_members_set_updated_at on public.team_matching_members;
 create trigger team_matching_members_set_updated_at

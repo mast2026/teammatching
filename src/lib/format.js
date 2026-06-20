@@ -127,6 +127,7 @@ export const tableLabels = {
   generation: "기수",
   role: "역할",
   isLeader: "팀장",
+  hasPassword: "비번 설정",
   applicantName: "지원자",
   contestTitle: "공모전",
   leaderName: "팀장",
