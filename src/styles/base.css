@@ -176,7 +176,7 @@ a {
 }
 
 .modal-panel {
-  width: min(520px, 100%);
+  width: min(760px, 100%);
   max-height: min(90vh, 820px);
   overflow: auto;
   background: #fff;
@@ -224,6 +224,100 @@ a {
 .team-create-form {
   display: grid;
   gap: 16px;
+}
+
+.structured-section {
+  display: grid;
+  gap: 10px;
+}
+
+.needed-role-list {
+  display: grid;
+  gap: 10px;
+}
+
+.needed-role-list.compact {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.needed-role-card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fbfcfe;
+}
+
+.needed-role-card.readonly {
+  align-content: start;
+}
+
+.needed-role-card.readonly strong {
+  font-size: 0.94rem;
+}
+
+.needed-role-card.readonly p {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--font-small);
+  line-height: 1.5;
+}
+
+.needed-role-label {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  color: var(--navy);
+  background: var(--blue-soft);
+  font-size: var(--font-small);
+  font-weight: 900;
+}
+
+.choice-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.choice-chip {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #fff;
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.choice-chip.active {
+  border-color: rgba(49, 130, 246, 0.32);
+  color: var(--navy);
+  background: var(--blue-soft);
+}
+
+.team-structured-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.team-structured-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: var(--font-small);
+  font-weight: 800;
 }
 
 .modal-actions {

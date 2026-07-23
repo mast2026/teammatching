@@ -171,6 +171,74 @@
   flex-shrink: 0;
 }
 
+.application-review-actions select {
+  width: 132px;
+  min-height: 32px;
+  padding: 6px 8px;
+  font-size: var(--font-small);
+}
+
+.application-details {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.member-score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid #dbeafe;
+  border-radius: 10px;
+  background: #eff6ff;
+}
+
+.member-score div {
+  display: grid;
+  gap: 1px;
+}
+
+.member-score span,
+.member-score small {
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 700;
+}
+
+.member-score strong {
+  color: var(--navy-dark);
+  font-size: 1rem;
+}
+
+.application-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.application-detail-row {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border-radius: 9px;
+  background: #fff;
+  border: 1px solid var(--line-soft);
+}
+
+.application-detail-row span {
+  color: var(--muted-2);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.application-detail-row strong {
+  color: var(--ink);
+  font-size: var(--font-small);
+  line-height: 1.4;
+}
+
 .user-avatar-btn {
   width: 36px;
   height: 36px;
@@ -1016,5 +1084,24 @@
 
   .team-member-meta {
     text-align: left;
+  }
+
+  .application-review-item {
+    display: grid;
+  }
+
+  .application-review-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .application-review-actions select {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .application-detail-grid {
+    grid-template-columns: 1fr;
   }
 }

@@ -38,6 +38,12 @@ const snake = {
   requiredMembers: "required_members",
   currentMembers: "current_members",
   prizeDistribution: "prize_distribution",
+  neededRoles: "needed_roles",
+  workStyle: "work_style",
+  meetingStyle: "meeting_style",
+  interestAreas: "interest_areas",
+  personalityTags: "personality_tags",
+  skillTags: "skill_tags",
   closedAt: "closed_at",
   awardResult: "award_result",
   teamId: "team_id",
@@ -48,6 +54,9 @@ const snake = {
   surveyExperience: "survey_experience",
   surveyStrengths: "survey_strengths",
   surveyTeamStyle: "survey_team_style",
+  capabilityAppeal: "capability_appeal",
+  availabilityNote: "availability_note",
+  rejectReason: "reject_reason",
   leaderPriority: "leader_priority",
   memberId: "member_id",
   tagTone: "tag_tone",
@@ -100,6 +109,7 @@ const env = () => {
 };
 
 const signValue = (value, secret) => createHmac("sha256", secret).update(value).digest("base64url");
+const SESSION_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
 const makeSignedValue = (payload, secret) => {
   const value = Buffer.from(JSON.stringify(payload)).toString("base64url");
@@ -118,8 +128,13 @@ const readSignedValue = (signedValue, secret) => {
   return JSON.parse(Buffer.from(value, "base64url").toString("utf8"));
 };
 
-const cookieFor = (user, secret) =>
-  `mast_tm_session=${makeSignedValue(publicMember(user), secret)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=604800`;
+const cookieFor = (user, secret) => {
+  const expires = new Date(Date.now() + SESSION_MAX_AGE_SECONDS * 1000).toUTCString();
+  return `mast_tm_session=${makeSignedValue(publicMember(user), secret)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_MAX_AGE_SECONDS}; Expires=${expires}`;
+};
+
+const clearSessionCookie =
+  "mast_tm_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT";
 
 const authFromCookie = (event) => {
   const cookie = event.headers.cookie || event.headers.Cookie || "";
@@ -258,6 +273,127 @@ async function listTeams(supabase, filter = {}) {
   return rows;
 }
 
+const scoreCompleteness = (values, maxScore) => {
+  const filled = values.filter((value) => {
+    if (Array.isArray(value)) return value.length > 0;
+    if (value && typeof value === "object") return Object.values(value).some(Boolean);
+    return String(value ?? "").trim().length > 0;
+  }).length;
+  return Math.round((filled / values.length) * maxScore);
+};
+
+const clampScore = (value, max) => Math.max(0, Math.min(max, Math.round(value)));
+
+async function optionalSelect(supabase, table, queryBuilder) {
+  try {
+    const query = queryBuilder(supabase.from(table));
+    const { data, error } = await query;
+    if (error) {
+      if (error.code === "42P01" || error.code === "42703") return [];
+      throw error;
+    }
+    return data ?? [];
+  } catch (error) {
+    if (error.code === "42P01" || error.code === "42703") return [];
+    throw error;
+  }
+}
+
+async function memberScoreMap(supabase, applicationRows, memberMap) {
+  const memberIds = [...new Set((applicationRows ?? []).map((row) => row.applicant_id).filter(Boolean))];
+  if (!memberIds.length) return new Map();
+
+  const [events, peerReviews] = await Promise.all([
+    optionalSelect(supabase, "team_matching_member_score_events", (query) =>
+      query.select("*").in("member_id", memberIds)
+    ),
+    optionalSelect(supabase, "team_matching_peer_reviews", (query) =>
+      query.select("*").in("reviewee_id", memberIds)
+    )
+  ]);
+
+  const eventMap = new Map();
+  for (const event of events) {
+    const list = eventMap.get(event.member_id) ?? [];
+    list.push(event);
+    eventMap.set(event.member_id, list);
+  }
+
+  const reviewMap = new Map();
+  for (const review of peerReviews) {
+    const list = reviewMap.get(review.reviewee_id) ?? [];
+    list.push(review);
+    reviewMap.set(review.reviewee_id, list);
+  }
+
+  return new Map(
+    (applicationRows ?? []).map((row) => {
+      const member = memberMap.get(row.applicant_id) ?? {};
+      const item = toCamel(row);
+      const profileScore = scoreCompleteness(
+        [
+          member.name,
+          member.school,
+          member.generation,
+          member.major,
+          item.message,
+          item.capabilityAppeal,
+          item.surveyPurpose,
+          item.surveyIntensity,
+          item.surveyRole,
+          item.surveyExperience,
+          item.surveyStrengths,
+          item.surveyTeamStyle,
+          item.personalityTags,
+          item.skillTags,
+          item.availabilityNote
+        ],
+        40
+      );
+
+      const offlineEvents = (eventMap.get(row.applicant_id) ?? []).filter((event) =>
+        ["offline_attendance", "offline_verified"].includes(event.event_type)
+      );
+      const verifiedCount = offlineEvents.filter((event) => event.verified).length;
+      const attendanceScore = Math.min(offlineEvents.length, 5) * 3;
+      const verifiedScore = offlineEvents.length ? (verifiedCount / offlineEvents.length) * 15 : 0;
+      const activityScore = clampScore(attendanceScore + verifiedScore, 30);
+
+      const reviews = reviewMap.get(row.applicant_id) ?? [];
+      const peerScore = reviews.length
+        ? clampScore(
+            reviews.reduce((sum, review) => {
+              const avg =
+                (Number(review.participation ?? 0) +
+                  Number(review.sincerity ?? 0) +
+                  Number(review.collaboration ?? 0) +
+                  Number(review.communication ?? 0)) /
+                4;
+              return sum + (avg / 5) * 30;
+            }, 0) / reviews.length,
+            30
+          )
+        : 0;
+
+      const score = {
+        baseTotal: profileScore + activityScore,
+        maxBase: 70,
+        total: profileScore + activityScore + peerScore,
+        maxTotal: 100,
+        profileScore,
+        activityScore,
+        peerScore,
+        offlineCount: offlineEvents.length,
+        verifiedOfflineCount: verifiedCount,
+        peerReviewCount: reviews.length,
+        provisional: offlineEvents.length === 0 && reviews.length === 0
+      };
+
+      return [row.id, score];
+    })
+  );
+}
+
 async function stats(supabase) {
   const [members, leaders, contests, teams, recruiting, applications, pending] = await Promise.all([
     supabase.from("team_matching_members").select("id", { count: "exact", head: true }),
@@ -374,6 +510,7 @@ async function applications(supabase, filter = {}) {
   if (error) throw error;
   const teamMap = new Map(teams.map((team) => [team.id, team]));
   const memberMap = new Map((members.data ?? []).map((member) => [member.id, member]));
+  const scores = await memberScoreMap(supabase, rows ?? [], memberMap);
   let output = (rows ?? []).map((row) => {
     const team = teamMap.get(row.team_id);
     const member = memberMap.get(row.applicant_id);
@@ -384,8 +521,10 @@ async function applications(supabase, filter = {}) {
       applicantMajor: member?.major ?? "",
       applicantGeneration: member?.generation ?? null,
       contestTitle: team?.contestTitle ?? "",
+      leaderId: team?.leaderId ?? null,
       leaderName: team?.leaderName ?? "",
-      teamStatus: team?.status ?? ""
+      teamStatus: team?.status ?? "",
+      memberScore: scores.get(row.id) ?? null
     };
   });
   if (filter.memberId) output = output.filter((row) => row.applicantId === filter.memberId);
@@ -468,7 +607,7 @@ async function route(event) {
   }
 
   if (method === "POST" && path === "/auth/logout") {
-    return json(200, { ok: true }, { "Set-Cookie": "mast_tm_session=; Path=/; Max-Age=0; SameSite=Lax" });
+    return json(200, { ok: true }, { "Set-Cookie": clearSessionCookie });
   }
 
   if (method === "GET" && path === "/auth/me") {
@@ -758,6 +897,12 @@ async function route(event) {
         "required_members",
         "introduction",
         "prize_distribution",
+        "needed_roles",
+        "work_style",
+        "meeting_style",
+        "interest_areas",
+        "personality_tags",
+        "skill_tags",
         "status",
         "award_result"
       ];
@@ -802,7 +947,13 @@ async function route(event) {
         currentMembers: 1,
         status: "recruiting",
         requiredMembers: body.requiredMembers ?? 4,
-        introduction: body.introduction ?? ""
+        introduction: body.introduction ?? "",
+        neededRoles: body.neededRoles ?? [],
+        workStyle: body.workStyle ?? "",
+        meetingStyle: body.meetingStyle ?? "",
+        interestAreas: body.interestAreas ?? [],
+        personalityTags: body.personalityTags ?? [],
+        skillTags: body.skillTags ?? []
       });
       const { data, error } = await supabase.from("team_matching_teams").insert(payload).select("*").single();
       if (error) throw error;
@@ -831,8 +982,10 @@ async function route(event) {
       return json(200, await applications(supabase, { memberId: user.id }));
     }
     if (method === "GET" && parts.length === 1) {
-      requireAdmin(event);
-      return json(200, await applications(supabase));
+      const user = requireAuth(event);
+      const rows = await applications(supabase);
+      if (isAdminUser(user)) return json(200, rows);
+      return json(200, rows.filter((row) => row.leaderId === user.id));
     }
     if (method === "POST" && parts.length === 1) {
       const user = authFromCookie(event);
@@ -864,9 +1017,13 @@ async function route(event) {
         return json(403, { message: "팀장 또는 관리자만 처리할 수 있습니다." });
       }
       const status = parts[2] === "accept" ? "accepted" : "rejected";
+      const updatePayload = {
+        status,
+        reject_reason: status === "rejected" ? body.rejectReason ?? "기타" : null
+      };
       const { data, error } = await supabase
         .from("team_matching_applications")
-        .update({ status })
+        .update(updatePayload)
         .eq("id", applicationId)
         .select("*")
         .single();

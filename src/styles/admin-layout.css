@@ -477,6 +477,14 @@
   gap: 4px;
 }
 
+.admin-app-item-actions select {
+  width: 118px;
+  min-height: 28px;
+  padding: 4px 7px;
+  font-size: 0.7rem;
+  background: #fff;
+}
+
 @media (max-width: 900px) {
   .admin-inline-fields-3,
   .admin-inline-fields-4 {
@@ -491,6 +499,24 @@
   .admin-team-app-card-meta {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .admin-app-item {
+    display: grid;
+  }
+
+  .admin-app-item-side {
+    justify-items: stretch;
+  }
+
+  .admin-app-item-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-app-item-actions select {
+    grid-column: 1 / -1;
+    width: 100%;
   }
 }
 

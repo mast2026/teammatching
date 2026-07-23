@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { post } from "../../api.js";
+import { rejectReasonOptions } from "../../lib/matchingForm.js";
+import { ApplicationDetails } from "../ApplicationDetails.jsx";
 import { StatusBadge } from "../StatusBadge.jsx";
 
 function countByStatus(apps, status) {
@@ -9,13 +11,16 @@ function countByStatus(apps, status) {
 
 function TeamApplicationCard({ team, applications, onRefresh }) {
   const [open, setOpen] = useState(false);
+  const [rejectReasons, setRejectReasons] = useState({});
   const pending = countByStatus(applications, "pending");
   const accepted = countByStatus(applications, "accepted");
   const rejected = countByStatus(applications, "rejected");
   const total = applications.length;
 
   const handleAction = async (id, action) => {
-    await post(`/applications/${id}/${action}`, {});
+    await post(`/applications/${id}/${action}`, {
+      rejectReason: action === "reject" ? rejectReasons[id] ?? "기타" : null
+    });
     onRefresh?.();
   };
 
@@ -51,6 +56,7 @@ function TeamApplicationCard({ team, applications, onRefresh }) {
                       {app.applicantGeneration ? ` · ${app.applicantGeneration}기` : ""}
                     </span>
                     {app.message && <p>{app.message}</p>}
+                    <ApplicationDetails application={app} />
                   </div>
                   <div className="admin-app-item-side">
                     <StatusBadge status={app.status} />
@@ -59,6 +65,17 @@ function TeamApplicationCard({ team, applications, onRefresh }) {
                         <button type="button" className="btn btn-primary btn-xs" onClick={() => handleAction(app.id, "accept")}>
                           승인
                         </button>
+                        <select
+                          value={rejectReasons[app.id] ?? "기타"}
+                          onChange={(event) => setRejectReasons((prev) => ({ ...prev, [app.id]: event.target.value }))}
+                          aria-label="거절 사유"
+                        >
+                          {rejectReasonOptions.map((reason) => (
+                            <option key={reason} value={reason}>
+                              {reason}
+                            </option>
+                          ))}
+                        </select>
                         <button type="button" className="btn btn-ghost btn-xs" onClick={() => handleAction(app.id, "reject")}>
                           거절
                         </button>

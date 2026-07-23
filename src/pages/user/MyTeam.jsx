@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Plus, UsersRound } from "lucide-react";
 import { get, post } from "../../api.js";
+import { ApplicationDetails } from "../../components/ApplicationDetails.jsx";
 import { EmptyState } from "../../components/EmptyState.jsx";
 import { PageHeader } from "../../components/PageHeader.jsx";
 import { SectionCard } from "../../components/SectionCard.jsx";
 import { TeamCard } from "../../components/TeamCard.jsx";
+import { rejectReasonOptions } from "../../lib/matchingForm.js";
 import { go } from "../../lib/navigation.js";
 
 const steps = [
@@ -16,6 +18,7 @@ const steps = [
 export function MyTeam({ user }) {
   const [teams, setTeams] = useState([]);
   const [applications, setApplications] = useState([]);
+  const [rejectReasons, setRejectReasons] = useState({});
 
   const refresh = useCallback(() => {
     get("/teams/my").then(setTeams).catch(() => setTeams([]));
@@ -37,7 +40,9 @@ export function MyTeam({ user }) {
   );
 
   const handleApplication = async (id, action) => {
-    await post(`/applications/${id}/${action}`, {});
+    await post(`/applications/${id}/${action}`, {
+      rejectReason: action === "reject" ? rejectReasons[id] ?? "기타" : null
+    });
     refresh();
   };
 
@@ -65,6 +70,7 @@ export function MyTeam({ user }) {
                     {row.applicantGeneration ? ` · ${row.applicantGeneration}기` : ""}
                   </p>
                   {row.message && <p className="application-review-message">{row.message}</p>}
+                  <ApplicationDetails application={row} />
                 </div>
                 <div className="application-review-actions">
                   <button
@@ -74,6 +80,17 @@ export function MyTeam({ user }) {
                   >
                     승인
                   </button>
+                  <select
+                    value={rejectReasons[row.id] ?? "기타"}
+                    onChange={(event) => setRejectReasons((prev) => ({ ...prev, [row.id]: event.target.value }))}
+                    aria-label="거절 사유"
+                  >
+                    {rejectReasonOptions.map((reason) => (
+                      <option key={reason} value={reason}>
+                        {reason}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     className="btn btn-ghost btn-sm"
