@@ -92,6 +92,16 @@ const publicMember = (row) => {
   return { ...member, hasPassword };
 };
 
+const requiredEnv = (...names) => {
+  const value = names
+    .map((name) => process.env[name]?.trim())
+    .find(Boolean);
+  if (!value) {
+    throw new Error(`Missing ${names.join(" or ")}`);
+  }
+  return value;
+};
+
 const env = () => {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -102,7 +112,7 @@ const env = () => {
     supabase: createClient(supabaseUrl, serviceRoleKey, {
       auth: { persistSession: false }
     }),
-    adminPassword: process.env.ADMIN_PASSWORD || process.env.REPLIT_ADMIN_PASSWORD || "123456",
+    adminPassword: requiredEnv("ADMIN_PASSWORD", "REPLIT_ADMIN_PASSWORD"),
     advisorPassword: process.env.ADVISOR_PASSWORD || process.env.REPLIT_ADVISOR_PASSWORD || "",
     sessionSecret: process.env.SESSION_SECRET || serviceRoleKey
   };
