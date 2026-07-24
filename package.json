@@ -8,6 +8,7 @@
     "dev:vite": "vite --host 0.0.0.0",
     "build": "vite build",
     "preview": "vite preview --host 0.0.0.0",
+    "test:security": "node --test test/security/*.test.mjs",
     "import:sql": "node scripts/build-import-sql.mjs",
     "supabase:apply": "node scripts/apply-supabase-sql.mjs"
   },
